@@ -5,11 +5,6 @@ scikit-learn
 pandas
 matplotlib
 seaborn
-tensorflow
 wordcloud
 plotly.express
-<<<<<<< HEAD
 streamlit-option-menu
-=======
-streamlit-option-menu
->>>>>>> 3d54b6009cced285debc569baa74faeeee49c1c6

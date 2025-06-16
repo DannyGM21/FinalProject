@@ -68,13 +68,6 @@ def predict(text):
     label = "Hate Speech" if pred_class == 1 else "Not Hate Speech"
     return label, confidence
 
-
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 3d54b6009cced285debc569baa74faeeee49c1c6
-
 with st.sidebar:
     selected = option_menu("Main Menu", ["Inference", "Dataset Visualization", "Hyperparameter Tuning", "Model Analysis"],
                            icons=['chat', 'bar-chart', 'gear', 'clipboard-data'],

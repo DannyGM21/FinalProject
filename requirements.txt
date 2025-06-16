@@ -5,3 +5,7 @@ scikit-learn
 pandas
 matplotlib
 seaborn
+tensorflow
+wordcloud
+plotly.express
+streamlit-option-menu

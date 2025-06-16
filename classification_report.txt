@@ -5,4 +5,8 @@ Not Hate Speech       0.79      0.83      0.81       286
 
        accuracy                           0.80       572
       macro avg       0.81      0.80      0.80       572
+<<<<<<< HEAD
    weighted avg       0.81      0.80      0.80       572
+=======
+   weighted avg       0.81      0.80      0.80       572
+>>>>>>> 3d54b6009cced285debc569baa74faeeee49c1c6

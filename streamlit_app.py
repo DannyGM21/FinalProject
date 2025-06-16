@@ -1,20 +1,28 @@
 import streamlit as st
-from streamlit_option_menu import option_menu
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from transformers import DistilBertTokenizerFast, TFDistilBertForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import tensorflow as tf
 import numpy as np
+from sklearn.metrics import confusion_matrix
 from wordcloud import WordCloud
 import plotly.express as px
+from streamlit_option_menu import option_menu
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+
+
+# App Layout
+st.set_page_config(page_title="Hate Speech Detection", layout="wide")
 
 # Load model and tokenizer
 @st.cache_resource
 def load_model():
-    model = TFDistilBertForSequenceClassification.from_pretrained("./model")
-    tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
+    model = AutoModelForSequenceClassification.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary2")
+    tokenizer = AutoTokenizer.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary2")
     return model, tokenizer
+
 
 model, tokenizer = load_model()
 
@@ -29,15 +37,30 @@ df = load_data()
 
 # Prediction function
 def predict(text):
-    inputs = tokenizer(text, return_tensors="tf", truncation=True, padding=True, max_length=128)
-    outputs = model(inputs)[0]
-    probs = tf.nn.softmax(outputs, axis=-1).numpy()
-    pred = np.argmax(probs, axis=1)[0]
-    confidence = probs[0][pred]
-    return ("Hate Speech" if pred == 1 else "Not Hate Speech"), confidence
+    encoded = tokenizer(
+        text,
+        return_tensors="pt",
+        padding=True,
+        truncation=True,
+        max_length=128
+    )
 
-# App Layout
-st.set_page_config(page_title="Hate Speech Detection", layout="wide")
+    input_ids = encoded.get("input_ids")
+    attention_mask = encoded.get("attention_mask")
+
+    with torch.no_grad():
+        outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+
+    # Softmax y clase predicha
+    probs = torch.nn.functional.softmax(outputs.logits, dim=1)
+    pred_class = torch.argmax(probs, dim=1).item()
+    confidence = probs[0][pred_class].item()
+
+    label = "Hate Speech" if pred_class == 1 else "Not Hate Speech"
+    return label, confidence
+
+
+
 
 with st.sidebar:
     selected = option_menu("Main Menu", ["Inference", "Dataset Visualization", "Hyperparameter Tuning", "Model Analysis"],
@@ -46,7 +69,7 @@ with st.sidebar:
 
 # Page 1 - Inference
 if selected == "Inference":
-    st.title("🚨 Hate Speech Detection")
+    st.title("Hate Speech Detection")
     text = st.text_area("Enter a sentence:")
     if st.button("Predict"):
         label, confidence = predict(text)
@@ -55,7 +78,7 @@ if selected == "Inference":
 
 # Page 2 - Dataset Visualization
 elif selected == "Dataset Visualization":
-    st.title("📊 Dataset Visualization")
+    st.title("Dataset Visualization")
     st.subheader("Class Distribution")
     counts = df['label'].value_counts()
     st.bar_chart(counts)
@@ -75,7 +98,7 @@ elif selected == "Dataset Visualization":
 
 # Page 3 - Hyperparameter Tuning
 elif selected == "Hyperparameter Tuning":
-    st.title("⚙️ Hyperparameter Tuning")
+    st.title("Hyperparameter Tuning")
     st.markdown("""
     - Learning Rate: 2e-5 to 5e-5
     - Batch Size: 16, 32
@@ -91,7 +114,7 @@ elif selected == "Hyperparameter Tuning":
 
 # Page 4 - Model Analysis
 elif selected == "Model Analysis":
-    st.title("📈 Model Evaluation and Justification")
+    st.title("Model Evaluation and Justification")
     st.markdown("""
     - **Model**: DistilBERT fine-tuned for binary classification.
     - **Reason**: Efficient and smaller transformer, suitable for limited compute.
@@ -102,9 +125,15 @@ elif selected == "Model Analysis":
     st.text(open("classification_report.txt").read())
 
     st.subheader("Confusion Matrix")
+    
     fig = plt.figure()
-    cm = np.load("confusion_matrix.npy")
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["Not Hate", "Hate"], yticklabels=["Not Hate", "Hate"])
+    cm = np.load("confusion_matrix.npy", allow_pickle=True)
+    cm = cm[0] 
+    fig, ax = plt.subplots()
+    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, xticklabels=["No Hate", "Hate"], yticklabels=["No Hate", "Hate"], ax=ax)
+    ax.set_xlabel("Predicted Labels")
+    ax.set_ylabel("True Labels")
+    ax.set_title("Confusion Matrix")
     st.pyplot(fig)
 
     st.subheader("Error Analysis")

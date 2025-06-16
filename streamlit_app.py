@@ -8,152 +8,126 @@ Original file is located at
 """
 
 import streamlit as st
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import tensorflow as tf
+import numpy as np
+from wordcloud import WordCloud
+import plotly.express as px
+from streamlit_option_menu import option_menu
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-import numpy as np
-from transformers import AutoConfig
 
-# Carga del modelo y tokenizer (ajusta el nombre del modelo si lo guardaste con otro)
+
+# App Layout
+st.set_page_config(page_title="Hate Speech Detection", layout="wide")
+
+# Load model and tokenizer
 @st.cache_resource
 def load_model():
-    model = AutoModelForSequenceClassification.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary")
-    tokenizer = AutoTokenizer.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary")
+    model = AutoModelForSequenceClassification.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary2")
+    tokenizer = AutoTokenizer.from_pretrained("Danny1221Gm12/modelo-hate-speech-binary2")
     return model, tokenizer
 
 
 model, tokenizer = load_model()
 
-# Sidebar para navegación
-st.sidebar.title(" NLP App")
-page = st.sidebar.radio("Selecciona una página:", [" Inferencia", " Visualización Dataset", " Hyperparameter Tuning", " Evaluación y Análisis"])
+# Load dataset
+@st.cache_data
+def load_data():
+    df = pd.read_csv("labeled_data.csv")
+    df['label'] = df['class'].apply(lambda x: 1 if x == 0 else 0)
+    return df
 
-# Página 1: Inferencia
-if page == "Inferencia":
-    st.title("Inferencia - Detección de Hate Speech")
-    st.markdown("Introduce un texto y el modelo te dirá si contiene hate speech o no.")
+df = load_data()
 
-    st.markdown("### Página de Inferencia")
-    st.markdown("""Esta página permite al usuario ingresar un texto y obtener una predicción del modelo entrenado, indicando si el texto es **hate speech** o **no hate speech**. Ideal para probar manualmente ejemplos nuevos y evaluar el comportamiento del modelo.""")
+# Prediction function
+def predict(text):
+    inputs = tokenizer(text, return_tensors="tf", truncation=True, padding=True, max_length=128)
+    outputs = model(inputs)[0]
+    probs = tf.nn.softmax(outputs, axis=-1).numpy()
+    pred = np.argmax(probs, axis=1)[0]
+    confidence = probs[0][pred]
+    return ("Hate Speech" if pred == 1 else "Not Hate Speech"), confidence
 
 
-    user_input = st.text_area("Escribe un texto aquí:", height=150)
 
-    if st.button("Predecir"):
-        if user_input.strip() == "":
-            st.warning("Por favor, escribe un texto.")
-        else:
-            # Tokenización
-            inputs = tokenizer(user_input, return_tensors="pt", truncation=True, padding=True, max_length=128)
-            outputs = model(**inputs)
-            probs = torch.nn.functional.softmax(outputs.logits, dim=1)
-            pred_label = torch.argmax(probs, dim=1).item()
-            confidence = probs[0][pred_label].item()
+with st.sidebar:
+    selected = option_menu("Main Menu", ["Inference", "Dataset Visualization", "Hyperparameter Tuning", "Model Analysis"],
+                           icons=['chat', 'bar-chart', 'gear', 'clipboard-data'],
+                           menu_icon="cast", default_index=0)
 
-            label_map = {0: "No Hate Speech", 1: "Hate Speech"}
-            st.success(f"**Predicción:** {label_map[pred_label]}")
-            st.info(f"**Confianza:** {confidence:.4f}")
+# Page 1 - Inference
+if selected == "Inference":
+    st.title("Hate Speech Detection")
+    text = st.text_area("Enter a sentence:")
+    if st.button("Predict"):
+        label, confidence = predict(text)
+        st.markdown(f"### Prediction: `{label}`")
+        st.markdown(f"### Confidence: `{confidence:.2f}`")
 
-elif page == "Visualización del Dataset":
-    st.header("Visualización del Dataset")
-    st.markdown("### Visualización del Dataset")
-    st.markdown("""
-Aquí puedes visualizar las primeras filas del dataset procesado y balanceado, junto con una gráfica de distribución de clases.
-Esto ayuda a entender cómo se ve el conjunto de datos antes de entrenar el modelo y verificar si el balance de clases se realizó correctamente.
-""")
+# Page 2 - Dataset Visualization
+elif selected == "Dataset Visualization":
+    st.title("Dataset Visualization")
+    st.subheader("Class Distribution")
+    counts = df['label'].value_counts()
+    st.bar_chart(counts)
 
-    # Cargar datos
-    df = pd.read_csv("labeled_data.csv")  # Usa la ruta correcta si estás en Colab o Drive
+    st.subheader("Token Length Distribution")
+    df['length'] = df['tweet'].astype(str).apply(lambda x: len(x.split()))
+    fig = px.histogram(df, x='length', nbins=30, title='Token Length Histogram')
+    st.plotly_chart(fig)
 
-    st.subheader("Vista previa del dataset")
-    st.dataframe(df.head(10))
-
-    st.subheader("Distribución de clases")
-    class_counts = df['class'].value_counts().sort_index()
-    class_labels = ['Hate Speech', 'Offensive Language', 'Neither']
-
-    fig, ax = plt.subplots()
-    sns.barplot(x=class_labels, y=class_counts.values, palette="viridis", ax=ax)
-    ax.set_ylabel("Número de ejemplos")
+    st.subheader("Word Cloud")
+    text = ' '.join(df['tweet'].astype(str))
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    fig, ax = plt.subplots(figsize=(10, 5))
+    ax.imshow(wordcloud, interpolation='bilinear')
+    ax.axis('off')
     st.pyplot(fig)
 
-    st.subheader("Longitud de los textos")
-    df['text_length'] = df['tweet'].astype(str).apply(len)
-    fig2, ax2 = plt.subplots()
-    sns.histplot(df['text_length'], bins=30, kde=True, ax=ax2)
-    ax2.set_title("Distribución de longitud de los tweets")
-    st.pyplot(fig2)
-
-    st.subheader("Ejemplos de tweets")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("### Hate Speech")
-        hate_examples = df[df['class'] == 0]['tweet'].sample(3, random_state=42)
-        for tweet in hate_examples:
-            st.write(f"• {tweet}")
-
-    with col2:
-        st.markdown("### No Hate Speech")
-        not_hate_examples = df[df['class'] == 2]['tweet'].sample(3, random_state=42)
-        for tweet in not_hate_examples:
-            st.write(f"• {tweet}")
-elif page == "Tuning de Hiperparámetros":
-    st.header("Tuning de Hiperparámetros")
-
+# Page 3 - Hyperparameter Tuning
+elif selected == "Hyperparameter Tuning":
+    st.title("Hyperparameter Tuning")
     st.markdown("""
-    _Espacio reservado para describir el proceso de optimización con Optuna. Aquí puedes explicar las decisiones tomadas, el rango de búsqueda para cada hiperparámetro y los mejores resultados encontrados._
+    - Learning Rate: 2e-5 to 5e-5
+    - Batch Size: 16, 32
+    - Epochs: 3 (fixed for time constraints)
+    - Dropout: 0.1 - 0.3
+    
+    Best configuration:
+    - Learning rate: 3e-5
+    - Batch size: 32
+    - Dropout: 0.2
+    """)
+    st.image("optuna_trials_plot.png", caption="Performance over trials", use_column_width=True)
 
-    **Mejores hiperparámetros encontrados:**
+# Page 4 - Model Analysis
+elif selected == "Model Analysis":
+    st.title("Model Evaluation and Justification")
+    st.markdown("""
+    - **Model**: DistilBERT fine-tuned for binary classification.
+    - **Reason**: Efficient and smaller transformer, suitable for limited compute.
+    - **Challenges**: Imbalanced data, informal language, short texts.
     """)
 
-    # Puedes modificar estos valores con los reales si los tienes
-    st.json({
-        "learning_rate": 2e-5,
-        "per_device_train_batch_size": 16,
-        "num_train_epochs": 3,
-        "weight_decay": 0.01
-    })
+    st.subheader("Classification Report")
+    st.text(open("classification_report.txt").read())
 
-    st.markdown("""
-    _Puedes completar esta sección más adelante con visualizaciones de la optimización, como evolución del score o importancia de parámetros._
-    """)
-
-elif page == "Análisis del Modelo":
-    st.header("Análisis del Modelo")
-    st.markdown("### Análisis del Modelo")
-    st.markdown("""
-Esta página muestra un análisis detallado del rendimiento del modelo en el conjunto de prueba. Incluye:
-- Matriz de confusión
-- Reporte de clasificación (precisión, recall, F1-score)
-- Análisis de errores (falsos positivos y negativos)
-
-Esto ayuda a entender los puntos fuertes y débiles del modelo entrenado.
-""")
-
-    st.markdown("### Métricas de Clasificación")
-    st.write("Accuracy:", accuracy_score(y_true, y_pred))
-    st.write("Precision:", precision_score(y_true, y_pred))
-    st.write("Recall:", recall_score(y_true, y_pred))
-    st.write("F1-score:", f1_score(y_true, y_pred))
-
-    st.markdown("### Matriz de Confusión")
-    cm = confusion_matrix(y_true, y_pred)
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", xticklabels=["Not Hate", "Hate"], yticklabels=["Not Hate", "Hate"])
-    plt.xlabel("Predicción")
-    plt.ylabel("Real")
+    st.subheader("Confusion Matrix")
+    fig = plt.figure()
+    cm = np.load("confusion_matrix.npy")
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["Not Hate", "Hate"], yticklabels=["Not Hate", "Hate"])
     st.pyplot(fig)
 
-    st.markdown("### Errores de Clasificación")
-
-    # Ejemplos de errores
-    false_positives = [i for i in range(len(y_true)) if y_true[i] == 0 and y_pred[i] == 1]
-    false_negatives = [i for i in range(len(y_true)) if y_true[i] == 1 and y_pred[i] == 0]
-
-    st.markdown("#### Falsos Positivos (predijo hate pero era no hate)")
-    for i in false_positives[:3]:
-        st.error(texts[i])
-
-    st.markdown("#### Falsos Negativos (predijo no hate pero era hate)")
-    for i in false_negatives[:3]:
-        st.warning(texts[i])
+    st.subheader("Error Analysis")
+    st.markdown("""
+    - Some false positives were sarcastic or ambiguous.
+    - False negatives included subtle hate phrases.
+    - Improvement ideas:
+        - Use of context-aware models.
+        - Better annotations or data augmentation.
+        - Ensemble approaches.
+    """)

@@ -1,8 +1,8 @@
                  precision    recall  f1-score   support
 
-Not Hate Speech       0.50      0.98      0.66       286
-    Hate Speech       0.55      0.02      0.04       286
+Not Hate Speech       0.79      0.83      0.81       286
+    Hate Speech       0.82      0.78      0.80       286
 
-       accuracy                           0.50       572
-      macro avg       0.52      0.50      0.35       572
-   weighted avg       0.52      0.50      0.35       572
+       accuracy                           0.80       572
+      macro avg       0.81      0.80      0.80       572
+   weighted avg       0.81      0.80      0.80       572

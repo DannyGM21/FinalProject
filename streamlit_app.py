@@ -19,7 +19,7 @@ import plotly.express as px
 from streamlit_option_menu import option_menu
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
-
+from PIL import Image
 
 # App Layout
 st.set_page_config(page_title="Hate Speech Detection", layout="wide")
@@ -75,6 +75,16 @@ with st.sidebar:
 # Page 1 - Inference
 if selected == "Inference":
     st.title("Hate Speech Detection")
+    st.markdown("""Daniel Garnelo Martinez A00573086""")
+    st.markdown("""Welcome to my final project for the "Modeling Learning with Artificial Intelligence" class""")
+    st.markdown("For this project I chose to solve the problem of Hate Speech Detection ")
+    st.markdown("I'm really exited, as the page is actually running, and the model is well trained" \
+    ", however, the project had a lot of complication, particularly with the training of the model and the time " \
+    "involved in it, but this will be discused later un the project, please enjoy the app.")
+    st.title("Detector")
+    st.markdown("First in the list, we have the detector, here you can write any english sentence and it will predict if the sentence is a hate message or not with the probability of being hate.")
+
+    
     text = st.text_area("Enter a sentence:")
     if st.button("Predict"):
         label, confidence = predict(text)
@@ -84,14 +94,27 @@ if selected == "Inference":
 # Page 2 - Dataset Visualization
 elif selected == "Dataset Visualization":
     st.title("Dataset Visualization")
+    st.markdown("First to start the understanding of the problem we have to look at the chosen dataset," \
+    " I used a kaggle dataset, containing several tweeter posts with a lot of hate in them, you can find the dataset in this link: https://www.kaggle.com/datasets/mrmorj/hate-speech-and-offensive-language-dataset")
+    
     st.subheader("Class Distribution")
     counts = df['label'].value_counts()
     st.bar_chart(counts)
+    st.markdown("Firts lets see the distribution of the dataset, we can se an extreme unbalance" \
+    " in the dataset, as the class 0, containing all the hate messages, is disproportionally large" \
+    " meanwhile the class 1 is smaller, we can also talk a little bit about our model, as the two classes " \
+    " indicate we are using a binary classification model, as we need to differentiate between hate and no hate." \
+    "The dataset had to be balanced, using and undersampling technique, ass the unbalance was so damatically" \
+    " huge the undersampling was the best option as the information wouldnt be altered.")
+
 
     st.subheader("Token Length Distribution")
     df['length'] = df['tweet'].astype(str).apply(lambda x: len(x.split()))
     fig = px.histogram(df, x='length', nbins=30, title='Token Length Histogram')
     st.plotly_chart(fig)
+    st.markdown("Then we can see the average lenght of the messages in the dataset," \
+    " we can see the average lenght of the messages is 10 words.")
+
 
     st.subheader("Word Cloud")
     text = ' '.join(df['tweet'].astype(str))
@@ -100,11 +123,21 @@ elif selected == "Dataset Visualization":
     ax.imshow(wordcloud, interpolation='bilinear')
     ax.axis('off')
     st.pyplot(fig)
+    st.markdown("Now we se a word cloud of our dataset, we can see the words that appear the most" \
+    " in the messages, this words and slurs will be really important for the classification.")
 
 # Page 3 - Hyperparameter Tuning
 elif selected == "Hyperparameter Tuning":
     st.title("Hyperparameter Tuning")
+    st.markdown("At first as I created the model the score in it was really bad, reaching an average of" \
+    " 50%, so to make its predictions better I had to tune it to the limit, using the hyperparameters, getting " \
+    " up to 80%, a good score, I used binary classification to do this.")
+    st.markdown("However, the main barrier in the project was the running time, It wpuld take up to" \
+    " 42 hours of running time to get the results and the complete training graphs, I managed to do it once" \
+    ", however, I had to move and the session ended, deleting the files, I tried doing it again" \
+    " but it was to late, so Ill just put the configuration, ignore the other graphs.")
     st.markdown("""
+    Parameters:
     - Learning Rate: 2e-5 to 5e-5
     - Batch Size: 16, 32
     - Epochs: 3 (fixed for time constraints)
@@ -125,21 +158,14 @@ elif selected == "Model Analysis":
     - **Reason**: Efficient and smaller transformer, suitable for limited compute.
     - **Challenges**: Imbalanced data, informal language, short texts.
     """)
-
+    
     st.subheader("Classification Report")
     st.text(open("classification_report.txt").read())
 
     st.subheader("Confusion Matrix")
+
     
-    fig = plt.figure()
-    cm = np.load("confusion_matrix.npy", allow_pickle=True)
-    cm = cm[0] 
-    fig, ax = plt.subplots()
-    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", cbar=False, xticklabels=["No Hate", "Hate"], yticklabels=["No Hate", "Hate"], ax=ax)
-    ax.set_xlabel("Predicted Labels")
-    ax.set_ylabel("True Labels")
-    ax.set_title("Confusion Matrix")
-    st.pyplot(fig)
+
 
     st.subheader("Error Analysis")
     st.markdown("""

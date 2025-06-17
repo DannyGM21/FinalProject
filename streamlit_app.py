@@ -113,7 +113,8 @@ elif selected == "Dataset Visualization":
     fig = px.histogram(df, x='length', nbins=30, title='Token Length Histogram')
     st.plotly_chart(fig)
     st.markdown("Then we can see the average lenght of the messages in the dataset," \
-    " we can see the average lenght of the messages is 10 words.")
+    " we can see the average lenght of the messages is 10 words. This being a great challenge to the predictions," \
+    " as the model could benefit more of longer text so it can evaluate also context, this model cant")
 
 
     st.subheader("Word Cloud")
@@ -148,31 +149,66 @@ elif selected == "Hyperparameter Tuning":
     - Batch size: 32
     - Dropout: 0.2
     """)
-    st.image("optuna_trials_plot.png", caption="Performance over trials", use_column_width=True)
+    st.image("optuna_trials_plot.png", caption="Performance over trials", use_container_width=True)
 
 # Page 4 - Model Analysis
 elif selected == "Model Analysis":
     st.title("Model Evaluation and Justification")
-    st.markdown("""
-    - **Model**: DistilBERT fine-tuned for binary classification.
-    - **Reason**: Efficient and smaller transformer, suitable for limited compute.
-    - **Challenges**: Imbalanced data, informal language, short texts.
-    """)
+    st.markdown("To solve the problem, I trained a Transformers-based text classification " \
+    "model to detect hate speech in English using the Kaggle dataset explained above. " \
+    "I started by exploring and cleaning the data to fully understand the context "
+    "and ensure the model didn't learn unnecessary biases. I then used a pre-trained hugging " \
+    "faces model (distilbert-base-uncased), trained with PyTorch, I used this method because it is efficient" \
+    "and not that coplex, however it also took a lot of time to run, and applied class balancing " \
+    "techniques due to the marked disproportion between hateful and non-hateful examples in the " \
+    "dataset. I evaluated performance using metrics such as precision, recall, F1 score, and confusion " \
+    "matrix, which helped me identify not only how many correct answers the model got but also " \
+    "where it failed. I tuned hyperparameters with Optuna to further improve performance without losing" \
+    " generalization. I documented the entire process and translated it into a Streamlit application, " \
+    "where you can make real-time predictions, view visualizations, and explore the model's behavior "
+    "in a clear and interactive way. Beyond the numbers, I was interested in building a tool that was " \
+    "both useful and reliable, and I think I achieved that.")
     
     st.subheader("Classification Report")
     st.text(open("classification_report.txt").read())
+    st.markdown("When analyzing the model's performance metrics, " \
+    "I was quite satisfied with the results. The model achieved an overall " \
+    "accuracy of 80%, indicating that it was correct in 8 out of 10 " \
+    "predictions. Looking more closely, for the Not Hate Speech class, " \
+    "the model achieved a precision of 0.79, a recall of 0.83, and an " \
+    "F1-score of 0.81. This means that it was very good at identifying " \
+    "messages that were not hateful (high true negatives), although it s" \
+    "ometimes mistook some for hateful messages (false positives). " \
+    "For the Hate Speech class, it had a precision of 0.82 and a recall " \
+    "of 0.78, showing that it correctly identified many instances of hateful " \
+    "speech, but missed some.The macro average (which treats both classes " \
+    "equally) and the weighted average (which considers the size of each c" \
+    "lass) also hover around 0.80–0.81, indicating a good balance without " \
+    "overly favoring one class over another. I think it's important that " \
+    "the model isn't biased, especially in a task as delicate as this. " \
+    "While there's room for further improvement, these results show that " \
+    "the model is consistent, balanced, and functional for a realistic " \
+    "environment.")
 
     st.subheader("Confusion Matrix")
-
-    
+    image = Image.open("confusion_matrix.png")
+    st.image(image, use_container_width=True)
+    st.markdown("Now we can see a bit more clearly the evaluation," \
+    " as the model is capable of classificate correctly hate and not hate messages.")
 
 
     st.subheader("Error Analysis")
-    st.markdown("""
-    - Some false positives were sarcastic or ambiguous.
-    - False negatives included subtle hate phrases.
-    - Improvement ideas:
-        - Use of context-aware models.
-        - Better annotations or data augmentation.
-        - Ensemble approaches.
-    """)
+    st.markdown("The reasons why the model can fail is because some of " \
+    "the fake positives are cataloged wrong due to the ambuguity of some of the messages" \
+    "and the words, like the most used word (bitch), as in the english slang " \
+    "it has become a normal word not nessesarily meaning hate, like this case" \
+    " others can confuse the model and classify wrong, this also apply for " \
+    "sarcastic messages as it can be classified wrong" \
+    ". Maybe using a model that can take context and more date can be more precise" \
+    " also a different dataset can get better results.")
+
+    st.markdown("This is the end of the project, it really was a pain to do, as I actually" \
+    "suck at coding (this is a hate message), However, I did managed to do most of the work" \
+    "and got a pretty descent work, Im satisied, I hope you liked, thanks for the class.  ")
+
+    st.markdown("The end :)")
